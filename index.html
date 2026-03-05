@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QCM Cybersécurité</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #080f1a; font-family: 'JetBrains Mono', monospace; color: #e2e8f0; min-height: 100vh; }
+
+    /* GRID BG */
+    body::before { content:''; position:fixed; inset:0; background-image: linear-gradient(rgba(0,180,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,180,255,0.03) 1px,transparent 1px); background-size:40px 40px; pointer-events:none; z-index:0; }
+
+    .screen { position:relative; z-index:1; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; }
+
+    /* BUTTONS */
+    .btn-primary { padding:14px 36px; background:linear-gradient(135deg,#00ff88,#00b4ff); border:none; border-radius:12px; color:#080f1a; font-size:14px; font-weight:700; cursor:pointer; letter-spacing:1px; font-family:inherit; transition:opacity .2s; }
+    .btn-primary:hover { opacity:.85; }
+    .btn-primary:disabled { background:#1a3a5c; color:#4a5568; cursor:not-allowed; }
+    .btn-secondary { padding:14px 24px; background:rgba(255,255,255,.04); border:1px solid #1a3a5c; border-radius:12px; color:#94a3b8; font-size:13px; cursor:pointer; font-family:inherit; transition:all .2s; }
+    .btn-secondary:hover { border-color:#2d4a6a; color:#e2e8f0; }
+    .btn-blue { padding:14px 36px; background:linear-gradient(135deg,#00b4ff,#7c3aed); border:none; border-radius:12px; color:#fff; font-size:14px; font-weight:700; cursor:pointer; letter-spacing:1px; font-family:inherit; }
+
+    /* CARD */
+    .card { background:#0d1a2d; border:1px solid #1a3a5c; border-radius:16px; padding:36px 40px; box-shadow:0 0 60px rgba(0,180,255,.06); width:100%; max-width:720px; }
+
+    /* HOME */
+    #screen-home .logo { width:80px; height:80px; background:linear-gradient(135deg,rgba(0,255,136,.15),rgba(0,180,255,.15)); border:1px solid rgba(0,255,136,.3); border-radius:20px; display:flex; align-items:center; justify-content:center; font-size:36px; margin:0 auto 28px; }
+    #screen-home h1 { font-size:36px; font-weight:700; text-align:center; letter-spacing:-1px; margin-bottom:12px; }
+    #screen-home .subtitle { color:#00b4ff; font-size:12px; letter-spacing:4px; text-align:center; margin-bottom:12px; }
+    #screen-home p { color:#4a5568; font-size:14px; line-height:1.7; text-align:center; margin-bottom:32px; }
+    .features { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:32px; }
+    .feature { padding:14px; background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.06); border-radius:10px; text-align:center; }
+    .feature .icon { font-size:20px; margin-bottom:6px; }
+    .feature .label { color:#64748b; font-size:12px; }
+    .home-actions { display:flex; gap:12px; justify-content:center; }
+    .home-note { color:#1e3a5f; font-size:11px; text-align:center; margin-top:16px; }
+
+    /* QUIZ */
+    #screen-quiz { padding:32px 24px; }
+    .quiz-header { width:100%; max-width:720px; margin-bottom:28px; }
+    .quiz-meta { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+    .quiz-counter { color:#00ff88; font-size:13px; letter-spacing:2px; text-transform:uppercase; }
+    .quiz-brand { color:#4a5568; font-size:12px; }
+    .progress-bar { height:3px; background:#0d1f35; border-radius:2px; }
+    .progress-fill { height:100%; background:linear-gradient(90deg,#00ff88,#00b4ff); border-radius:2px; transition:width .4s ease; }
+    .q-icon { width:48px; height:48px; background:rgba(0,255,136,.08); border:1px solid rgba(0,255,136,.2); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; margin-bottom:20px; }
+    .q-text { color:#e2e8f0; font-size:19px; line-height:1.55; margin-bottom:28px; font-weight:600; letter-spacing:-.3px; }
+    .options { display:flex; flex-direction:column; gap:12px; margin-bottom:24px; }
+    .option { display:flex; align-items:center; gap:16px; padding:14px 18px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:10px; cursor:pointer; transition:all .2s; }
+    .option:hover:not(.disabled) { background:rgba(0,180,255,.07); border-color:rgba(0,180,255,.3); }
+    .option.selected { background:rgba(0,180,255,.1); border-color:#00b4ff; }
+    .option.correct { background:rgba(0,255,136,.1); border-color:#00ff88; }
+    .option.wrong { background:rgba(255,80,80,.1); border-color:#ff5050; }
+    .option.disabled { cursor:default; }
+    .opt-letter { width:28px; height:28px; border-radius:8px; border:1px solid currentColor; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+    .opt-text { font-size:14px; line-height:1.5; flex:1; }
+    .opt-icon { margin-left:auto; font-size:18px; }
+    .explanation { background:rgba(0,180,255,.06); border:1px solid rgba(0,180,255,.2); border-radius:10px; padding:14px 18px; margin-bottom:24px; display:none; }
+    .explanation p { color:#7dd3fc; font-size:13px; line-height:1.6; }
+    .quiz-actions { display:flex; gap:12px; }
+
+    /* RESULTS */
+    #screen-results .result-header { text-align:center; margin-bottom:32px; }
+    #screen-results .result-emoji { font-size:64px; margin-bottom:12px; }
+    #screen-results h1 { font-size:28px; font-weight:700; margin-bottom:12px; }
+    .badge { display:inline-block; padding:6px 20px; border-radius:20px; font-size:13px; letter-spacing:2px; font-weight:700; }
+    .kpi-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:20px; }
+    .kpi { background:#0d1a2d; border:1px solid #1a3a5c; border-radius:12px; padding:20px 16px; text-align:center; }
+    .kpi .kpi-icon { font-size:28px; margin-bottom:8px; }
+    .kpi .kpi-val { font-size:28px; font-weight:700; }
+    .kpi .kpi-label { color:#4a5568; font-size:12px; margin-top:4px; letter-spacing:1px; }
+    .global-box { background:#0d1a2d; border:1px solid #1a3a5c; border-radius:12px; padding:20px 24px; margin-bottom:20px; }
+    .global-box .box-title { color:#4a5568; font-size:11px; letter-spacing:2px; text-transform:uppercase; margin-bottom:16px; }
+    .global-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+    .gstat-val { font-size:22px; font-weight:700; }
+    .gstat-label { color:#4a5568; font-size:11px; margin-top:4px; }
+    .result-actions { display:flex; gap:12px; }
+
+    /* DASHBOARD */
+    #screen-dashboard { padding:32px 24px; justify-content:flex-start; }
+    .dash-inner { width:100%; max-width:900px; }
+    .dash-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:32px; flex-wrap:wrap; gap:12px; }
+    .dash-header h1 { color:#00ff88; font-size:20px; font-weight:700; letter-spacing:-.5px; }
+    .dash-header p { color:#4a5568; font-size:12px; margin-top:4px; letter-spacing:1px; }
+    .dash-actions { display:flex; gap:10px; }
+    .btn-refresh { padding:10px 18px; background:rgba(0,255,136,.08); border:1px solid rgba(0,255,136,.2); border-radius:8px; color:#00ff88; font-size:12px; cursor:pointer; font-family:inherit; }
+    .kpi-grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+    .bar-section { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px; }
+    .bar-card { background:#0d1a2d; border:1px solid #1a3a5c; border-radius:12px; padding:24px; }
+    .bar-card .bc-label { color:#4a5568; font-size:11px; letter-spacing:2px; margin-bottom:16px; }
+    .big-pct { font-size:42px; font-weight:700; letter-spacing:-2px; margin-bottom:16px; }
+    .bar-track { height:8px; background:#0a1628; border-radius:4px; }
+    .bar-fill { height:100%; border-radius:4px; transition:width 1s ease; }
+    .sessions-card { background:#0d1a2d; border:1px solid #1a3a5c; border-radius:12px; padding:24px; }
+    .sessions-card .sc-title { color:#4a5568; font-size:11px; letter-spacing:2px; margin-bottom:20px; }
+    .session-row { display:flex; align-items:center; gap:16px; padding:12px 16px; background:rgba(255,255,255,.02); border-radius:8px; border:1px solid rgba(255,255,255,.04); margin-bottom:8px; }
+    .s-num { color:#2d4a6a; font-size:12px; min-width:24px; }
+    .s-bar-track { flex:1; height:6px; background:#0a1628; border-radius:3px; }
+    .s-bar-fill { height:100%; border-radius:3px; }
+    .s-pct { font-size:14px; font-weight:700; min-width:50px; text-align:right; }
+    .s-correct { color:#00ff88; font-size:12px; min-width:50px; }
+    .s-wrong { color:#ff5050; font-size:12px; min-width:50px; }
+    .s-date { color:#2d4a6a; font-size:11px; min-width:100px; }
+    .empty-sessions { color:#2d4a6a; font-size:14px; text-align:center; padding:40px 0; }
+    .live-dot { display:inline-block; width:8px; height:8px; background:#00ff88; border-radius:50%; margin-right:6px; animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* LOADER */
+    #loader { position:fixed; inset:0; background:#080f1a; display:flex; align-items:center; justify-content:center; z-index:999; flex-direction:column; gap:16px; }
+    .spinner { width:40px; height:40px; border:3px solid #1a3a5c; border-top-color:#00ff88; border-radius:50%; animation:spin .8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    @media (max-width:600px) {
+      .kpi-grid, .kpi-grid4, .bar-section, .global-stats, .features { grid-template-columns:1fr 1fr; }
+      .card { padding:24px 20px; }
+      .q-text { font-size:16px; }
+      #screen-home h1 { font-size:26px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="spinner"></div>
+  <p style="color:#4a5568;font-size:13px;letter-spacing:2px;">CONNEXION FIREBASE...</p>
+</div>
+
+<!-- ═══ HOME ═══════════════════════════════════════════════════════ -->
+<div id="screen-home" class="screen" style="display:none;">
+  <div style="width:100%;max-width:640px;">
+    <div class="logo">🛡️</div>
+    <p class="subtitle">Quiz Interactif</p>
+    <h1>CYBERSÉCURITÉ</h1>
+    <p>Testez vos connaissances en sécurité informatique avec <strong style="color:#e2e8f0;">10 questions</strong>. Les résultats sont centralisés en temps réel pour tous les participants.</p>
+    <div class="features">
+      <div class="feature"><div class="icon">❓</div><div class="label">10 Questions</div></div>
+      <div class="feature"><div class="icon">⏱️</div><div class="label">~10 minutes</div></div>
+      <div class="feature"><div class="icon">📡</div><div class="label">Résultats live</div></div>
+    </div>
+    <div class="home-actions">
+      <button class="btn-primary" onclick="startQuiz()">DÉMARRER LE QUIZ →</button>
+      <button class="btn-secondary" onclick="showDashboard()">📊 Dashboard</button>
+    </div>
+    <p class="home-note"><span class="live-dot"></span>Résultats partagés entre tous les participants via Firebase</p>
+  </div>
+</div>
+
+<!-- ═══ QUIZ ════════════════════════════════════════════════════════ -->
+<div id="screen-quiz" class="screen" style="display:none;">
+  <div class="quiz-header">
+    <div class="quiz-meta">
+      <span class="quiz-counter" id="q-counter">Question 1/10</span>
+      <span class="quiz-brand">CYBER QCM</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="q-progress" style="width:0%"></div></div>
+  </div>
+  <div class="card">
+    <div class="q-icon">🔐</div>
+    <p class="q-text" id="q-text"></p>
+    <div class="options" id="q-options"></div>
+    <div class="explanation" id="q-explanation"><p id="q-expl-text"></p></div>
+    <div class="quiz-actions">
+      <button class="btn-primary" id="btn-validate" onclick="validateAnswer()" disabled>VALIDER</button>
+      <button class="btn-blue" id="btn-next" onclick="nextQuestion()" style="display:none;">SUIVANT →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ RESULTS ══════════════════════════════════════════════════════ -->
+<div id="screen-results" class="screen" style="display:none;">
+  <div style="width:100%;max-width:720px;">
+    <div class="result-header">
+      <div class="result-emoji" id="res-emoji">🏆</div>
+      <h1>Quiz terminé !</h1>
+      <span class="badge" id="res-badge">EXPERT</span>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-icon">📊</div><div class="kpi-val" id="res-score">0%</div><div class="kpi-label">SCORE</div></div>
+      <div class="kpi"><div class="kpi-icon">✅</div><div class="kpi-val" style="color:#00ff88" id="res-correct">0</div><div class="kpi-label">CORRECTES</div></div>
+      <div class="kpi"><div class="kpi-icon">❌</div><div class="kpi-val" style="color:#ff5050" id="res-wrong">0</div><div class="kpi-label">INCORRECTES</div></div>
+    </div>
+    <div class="global-box">
+      <p class="box-title">📡 Stats globales (tous participants)</p>
+      <div class="global-stats">
+        <div><div class="gstat-val" id="g-answered">—</div><div class="gstat-label">Réponses totales</div></div>
+        <div><div class="gstat-val" style="color:#00ff88" id="g-correct">—</div><div class="gstat-label">Bonnes réponses</div></div>
+        <div><div class="gstat-val" style="color:#ff5050" id="g-wrong">—</div><div class="gstat-label">Mauvaises réponses</div></div>
+      </div>
+    </div>
+    <div class="result-actions">
+      <button class="btn-secondary" onclick="startQuiz()">🔄 RECOMMENCER</button>
+      <button class="btn-blue" onclick="showDashboard()">📊 TABLEAU DE BORD</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DASHBOARD ════════════════════════════════════════════════════ -->
+<div id="screen-dashboard" class="screen" style="display:none;">
+  <div class="dash-inner">
+    <div class="dash-header">
+      <div>
+        <h1>📊 TABLEAU DE BORD</h1>
+        <p><span class="live-dot"></span>RÉSULTATS EN TEMPS RÉEL — CYBERSÉCURITÉ QCM</p>
+      </div>
+      <div class="dash-actions">
+        <button class="btn-refresh" onclick="loadDashboard()">⟳ REFRESH</button>
+        <button class="btn-secondary" onclick="showScreen('home')">← RETOUR</button>
+      </div>
+    </div>
+
+    <div class="kpi-grid4">
+      <div class="kpi"><div class="kpi-icon">👥</div><div class="kpi-val" style="color:#00b4ff" id="d-participants">—</div><div class="kpi-label">PARTICIPANTS</div></div>
+      <div class="kpi"><div class="kpi-icon">📝</div><div class="kpi-val" id="d-total">—</div><div class="kpi-label">RÉPONSES TOTALES</div></div>
+      <div class="kpi"><div class="kpi-icon">✅</div><div class="kpi-val" style="color:#00ff88" id="d-correct">—</div><div class="kpi-label">BONNES RÉPONSES</div></div>
+      <div class="kpi"><div class="kpi-icon">❌</div><div class="kpi-val" style="color:#ff5050" id="d-wrong">—</div><div class="kpi-label">MAUVAISES RÉPONSES</div></div>
+    </div>
+
+    <div class="bar-section">
+      <div class="bar-card">
+        <p class="bc-label">TAUX DE RÉUSSITE GLOBAL</p>
+        <div class="big-pct" id="d-pct-correct">—</div>
+        <div class="bar-track"><div class="bar-fill" id="d-bar-correct" style="width:0%;background:linear-gradient(90deg,#00ff88,#00b4ff)"></div></div>
+      </div>
+      <div class="bar-card">
+        <p class="bc-label">SCORE MOYEN PAR SESSION</p>
+        <div class="big-pct" style="color:#00b4ff" id="d-avg-score">—</div>
+        <div class="bar-track"><div class="bar-fill" id="d-bar-avg" style="width:0%;background:linear-gradient(90deg,#00b4ff,#7c3aed)"></div></div>
+      </div>
+    </div>
+
+    <div class="sessions-card">
+      <p class="sc-title">HISTORIQUE DES SESSIONS</p>
+      <div id="d-sessions-list"><p class="empty-sessions">Chargement...</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FIREBASE + LOGIC ════════════════════════════════════════════ -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, push, get, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+// ── Firebase config ──────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyDB0iA0syNLXEmr_fzrmp-vrcHNqZ9S90s",
+  authDomain: "qcm-cybersecurite.firebaseapp.com",
+  databaseURL: "https://qcm-cybersecurite-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "qcm-cybersecurite",
+  storageBucket: "qcm-cybersecurite.firebasestorage.app",
+  messagingSenderId: "389496708749",
+  appId: "1:389496708749:web:3cbcb65c2b2e0ae8b08cc4"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const sessionsRef = ref(db, "sessions");
+
+// ── Questions ────────────────────────────────────────────────────
+const QUESTIONS = [
+  { q:"Qu'est-ce qu'une attaque par phishing ?", opts:["Une attaque qui surcharge un serveur de requêtes","Une tentative de vol d'informations via des messages frauduleux","Un logiciel malveillant qui chiffre les données","Une intrusion physique dans un datacenter"], correct:1, expl:"Le phishing consiste à tromper l'utilisateur via de faux emails/sites pour voler ses identifiants." },
+  { q:"Que signifie l'acronyme HTTPS ?", opts:["HyperText Transfer Protocol Secured","High Transfer Technology Protocol System","HyperText Transfer Protocol Standard","Hybrid Transfer Protocol Secure"], correct:0, expl:"HTTPS = HyperText Transfer Protocol Secured, protocole sécurisé par chiffrement SSL/TLS." },
+  { q:"Qu'est-ce qu'un ransomware ?", opts:["Un outil de surveillance réseau","Un logiciel espion collectant des données","Un malware chiffrant les données pour exiger une rançon","Un virus se propageant via clés USB"], correct:2, expl:"Le ransomware chiffre vos fichiers et demande une rançon pour la clé de déchiffrement." },
+  { q:"Quelle est la longueur minimale recommandée pour un mot de passe sécurisé ?", opts:["6 caractères","8 caractères","12 caractères","16 caractères"], correct:2, expl:"Les bonnes pratiques recommandent au minimum 12 caractères avec majuscules, chiffres et symboles." },
+  { q:"Qu'est-ce qu'une attaque DDoS ?", opts:["Vol de données via SQL injection","Déni de service distribué saturant une cible","Exploitation d'une faille zero-day","Usurpation d'identité numérique"], correct:1, expl:"DDoS (Distributed Denial of Service) : des milliers de machines inondent une cible pour la rendre inaccessible." },
+  { q:"Qu'est-ce que l'authentification à deux facteurs (2FA) ?", opts:["Deux mots de passe différents pour un compte","Vérification d'identité via deux méthodes distinctes","Chiffrement double des données","Connexion depuis deux appareils simultanément"], correct:1, expl:"Le 2FA combine quelque chose que vous savez (mdp) + quelque chose que vous possédez (téléphone)." },
+  { q:"Qu'est-ce qu'une vulnérabilité Zero-Day ?", opts:["Une faille découverte le premier jour d'un déploiement","Une faille inconnue du fabricant, sans correctif disponible","Un bug corrigé en moins de 24 heures","Une attaque lancée à minuit"], correct:1, expl:"Une Zero-Day est une faille non encore connue/corrigée par l'éditeur, très dangereuse car sans patch." },
+  { q:"Que signifie le chiffrement de bout en bout (E2EE) ?", opts:["Chiffrement entre le routeur et le serveur uniquement","Chiffrement uniquement sur les appareils mobiles","Seuls l'émetteur et le destinataire peuvent lire les messages","Chiffrement des données stockées sur disque"], correct:2, expl:"E2EE garantit que seuls l'expéditeur et le destinataire déchiffrent le message, pas même le prestataire." },
+  { q:"Quel est le rôle d'un pare-feu (firewall) ?", opts:["Accélérer la connexion internet","Filtrer le trafic réseau selon des règles de sécurité","Sauvegarder automatiquement les données","Détecter les virus dans les fichiers téléchargés"], correct:1, expl:"Le firewall analyse et filtre les paquets réseau entrants/sortants selon des règles prédéfinies." },
+  { q:"Qu'est-ce que l'ingénierie sociale (social engineering) ?", opts:["Développement de logiciels collaboratifs","Manipulation psychologique pour obtenir des informations confidentielles","Analyse des réseaux sociaux d'entreprise","Méthode de cryptographie avancée"], correct:1, expl:"L'ingénierie sociale exploite la confiance humaine plutôt que des failles techniques pour obtenir des données." },
+];
+
+// ── State ────────────────────────────────────────────────────────
+let currentQ = 0;
+let selectedOpt = null;
+let confirmed = false;
+let sessionAnswers = [];
+let dashRefreshInterval = null;
+
+// ── Utils ────────────────────────────────────────────────────────
+function showScreen(id) {
+  ['home','quiz','results','dashboard'].forEach(s => {
+    document.getElementById('screen-'+s).style.display = 'none';
+  });
+  document.getElementById('screen-'+id).style.display = 'flex';
+  if (id !== 'dashboard' && dashRefreshInterval) { clearInterval(dashRefreshInterval); dashRefreshInterval = null; }
+}
+
+function scoreColor(pct) { return pct >= 80 ? '#00ff88' : pct >= 60 ? '#00b4ff' : '#ff5050'; }
+
+// ── HOME ─────────────────────────────────────────────────────────
+window.startQuiz = () => {
+  currentQ = 0; selectedOpt = null; confirmed = false; sessionAnswers = [];
+  showScreen('quiz');
+  renderQuestion();
+};
+
+window.showDashboard = () => { showScreen('dashboard'); loadDashboard(); startDashboardAutoRefresh(); };
+
+// ── QUIZ ─────────────────────────────────────────────────────────
+function renderQuestion() {
+  const q = QUESTIONS[currentQ];
+  document.getElementById('q-counter').textContent = `Question ${currentQ+1}/${QUESTIONS.length}`;
+  document.getElementById('q-progress').style.width = `${(currentQ/QUESTIONS.length)*100}%`;
+  document.getElementById('q-text').textContent = q.q;
+
+  const container = document.getElementById('q-options');
+  container.innerHTML = '';
+  q.opts.forEach((opt, i) => {
+    const div = document.createElement('div');
+    div.className = 'option';
+    div.dataset.idx = i;
+    div.innerHTML = `<span class="opt-letter" style="color:#94a3b8;border-color:#94a3b8">${String.fromCharCode(65+i)}</span><span class="opt-text" style="color:#94a3b8">${opt}</span>`;
+    div.onclick = () => selectOption(i);
+    container.appendChild(div);
+  });
+
+  document.getElementById('q-explanation').style.display = 'none';
+  document.getElementById('btn-validate').style.display = 'inline-block';
+  document.getElementById('btn-validate').disabled = true;
+  document.getElementById('btn-next').style.display = 'none';
+  selectedOpt = null; confirmed = false;
+}
+
+window.selectOption = (i) => {
+  if (confirmed) return;
+  selectedOpt = i;
+  document.querySelectorAll('.option').forEach((el, idx) => {
+    if (idx === i) { el.className = 'option selected'; el.querySelector('.opt-letter').style.color='#00b4ff'; el.querySelector('.opt-letter').style.borderColor='#00b4ff'; el.querySelector('.opt-text').style.color='#00b4ff'; }
+    else { el.className = 'option'; el.querySelector('.opt-letter').style.color='#94a3b8'; el.querySelector('.opt-letter').style.borderColor='#94a3b8'; el.querySelector('.opt-text').style.color='#94a3b8'; }
+  });
+  document.getElementById('btn-validate').disabled = false;
+};
+
+window.validateAnswer = () => {
+  if (selectedOpt === null) return;
+  confirmed = true;
+  const q = QUESTIONS[currentQ];
+  const isCorrect = selectedOpt === q.correct;
+
+  document.querySelectorAll('.option').forEach((el, idx) => {
+    el.classList.add('disabled');
+    if (idx === q.correct) {
+      el.className = 'option correct disabled';
+      el.querySelector('.opt-letter').style.color='#00ff88'; el.querySelector('.opt-letter').style.borderColor='#00ff88'; el.querySelector('.opt-text').style.color='#00ff88';
+      el.innerHTML += '<span class="opt-icon">✅</span>';
+    } else if (idx === selectedOpt && !isCorrect) {
+      el.className = 'option wrong disabled';
+      el.querySelector('.opt-letter').style.color='#ff5050'; el.querySelector('.opt-letter').style.borderColor='#ff5050'; el.querySelector('.opt-text').style.color='#ff5050';
+      el.innerHTML += '<span class="opt-icon">❌</span>';
+    }
+  });
+
+  document.getElementById('q-expl-text').innerHTML = `💡 <strong>Explication :</strong> ${q.expl}`;
+  document.getElementById('q-explanation').style.display = 'block';
+  document.getElementById('btn-validate').style.display = 'none';
+  document.getElementById('btn-next').style.display = 'inline-block';
+  document.getElementById('btn-next').textContent = currentQ+1 < QUESTIONS.length ? 'QUESTION SUIVANTE →' : 'VOIR MES RÉSULTATS →';
+
+  sessionAnswers.push({ correct: isCorrect, selected: selectedOpt });
+};
+
+window.nextQuestion = () => {
+  if (currentQ + 1 < QUESTIONS.length) { currentQ++; renderQuestion(); }
+  else { finishQuiz(); }
+};
+
+async function finishQuiz() {
+  const correct = sessionAnswers.filter(a => a.correct).length;
+  const wrong = sessionAnswers.length - correct;
+  const score = Math.round((correct / sessionAnswers.length) * 100);
+
+  // Save to Firebase
+  try {
+    await push(sessionsRef, { score, correct, wrong, total: sessionAnswers.length, date: Date.now() });
+  } catch(e) { console.error('Firebase write error:', e); }
+
+  // Update results screen
+  document.getElementById('res-emoji').textContent = score >= 80 ? '🏆' : score >= 60 ? '🎯' : '📚';
+  document.getElementById('res-score').textContent = score + '%';
+  document.getElementById('res-score').style.color = scoreColor(score);
+  document.getElementById('res-correct').textContent = correct;
+  document.getElementById('res-wrong').textContent = wrong;
+
+  const badge = document.getElementById('res-badge');
+  if (score >= 80) { badge.textContent='EXPERT'; badge.style.color='#00ff88'; badge.style.borderColor='#00ff88'; badge.style.background='rgba(0,255,136,0.1)'; }
+  else if (score >= 60) { badge.textContent='CONFIRMÉ'; badge.style.color='#00b4ff'; badge.style.borderColor='#00b4ff'; badge.style.background='rgba(0,180,255,0.1)'; }
+  else { badge.textContent='DÉBUTANT'; badge.style.color='#ff9900'; badge.style.borderColor='#ff9900'; badge.style.background='rgba(255,153,0,0.1)'; }
+
+  // Load global stats
+  try {
+    const snap = await get(sessionsRef);
+    if (snap.exists()) {
+      const data = Object.values(snap.val());
+      const tot = data.reduce((a,s) => a + s.total, 0);
+      const totC = data.reduce((a,s) => a + s.correct, 0);
+      const totW = data.reduce((a,s) => a + s.wrong, 0);
+      document.getElementById('g-answered').textContent = tot;
+      document.getElementById('g-correct').textContent = totC;
+      document.getElementById('g-wrong').textContent = totW;
+    }
+  } catch(e) {}
+
+  showScreen('results');
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────
+window.loadDashboard = async () => {
+  try {
+    const snap = await get(sessionsRef);
+    if (!snap.exists()) { renderDashboard([]); return; }
+    const sessions = Object.values(snap.val()).sort((a,b) => b.date - a.date);
+    renderDashboard(sessions);
+  } catch(e) { console.error('Dashboard load error:', e); }
+};
+
+function renderDashboard(sessions) {
+  const total = sessions.reduce((a,s) => a + s.total, 0);
+  const totalC = sessions.reduce((a,s) => a + s.correct, 0);
+  const totalW = sessions.reduce((a,s) => a + s.wrong, 0);
+  const pctC = total ? Math.round((totalC/total)*100) : 0;
+  const avgScore = sessions.length ? Math.round(sessions.reduce((a,s)=>a+s.score,0)/sessions.length) : 0;
+
+  document.getElementById('d-participants').textContent = sessions.length;
+  document.getElementById('d-total').textContent = total;
+  document.getElementById('d-correct').textContent = totalC;
+  document.getElementById('d-wrong').textContent = totalW;
+
+  const pctEl = document.getElementById('d-pct-correct');
+  pctEl.textContent = pctC + '%';
+  pctEl.style.color = scoreColor(pctC);
+  document.getElementById('d-bar-correct').style.width = pctC + '%';
+  document.getElementById('d-avg-score').textContent = avgScore + '%';
+  document.getElementById('d-bar-avg').style.width = avgScore + '%';
+
+  const list = document.getElementById('d-sessions-list');
+  if (sessions.length === 0) { list.innerHTML = '<p class="empty-sessions">Aucune session enregistrée</p>'; return; }
+
+  list.innerHTML = sessions.slice(0,15).map((s,i) => {
+    const c = scoreColor(s.score);
+    const d = new Date(s.date).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    return `<div class="session-row">
+      <span class="s-num">#${sessions.length-i}</span>
+      <div class="s-bar-track"><div class="s-bar-fill" style="width:${s.score}%;background:${c}"></div></div>
+      <span class="s-pct" style="color:${c}">${s.score}%</span>
+      <span class="s-correct">✅ ${s.correct}</span>
+      <span class="s-wrong">❌ ${s.wrong}</span>
+      <span class="s-date">${d}</span>
+    </div>`;
+  }).join('');
+}
+
+function startDashboardAutoRefresh() {
+  if (dashRefreshInterval) clearInterval(dashRefreshInterval);
+  dashRefreshInterval = setInterval(() => {
+    if (document.getElementById('screen-dashboard').style.display !== 'none') loadDashboard();
+  }, 5000);
+}
+
+// ── INIT ─────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.getElementById('loader').style.display = 'none';
+    showScreen('home');
+  }, 1200);
+});
+</script>
+
+</body>
+</html>
