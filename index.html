@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QCM Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:#080f1a; --card:#0d1a2d; --border:#1a3a5c;
+      --green:#00ff88; --blue:#00b4ff; --red:#ff5050;
+      --orange:#ff9900; --purple:#7c3aed;
+      --text:#e2e8f0; --muted:#4a5568; --dim:#2d4a6a;
+    }
+    body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); min-height:100vh; }
+    body::before { content:''; position:fixed; inset:0; background-image:linear-gradient(rgba(0,180,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,180,255,.03) 1px,transparent 1px); background-size:40px 40px; pointer-events:none; z-index:0; }
+    .screen { position:relative; z-index:1; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:32px; width:100%; max-width:760px; box-shadow:0 0 60px rgba(0,180,255,.05); }
+    .mono { font-family:'JetBrains Mono',monospace; }
+    .tag { display:inline-block; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:700; letter-spacing:1px; font-family:'JetBrains Mono',monospace; }
+    input,textarea,select { background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'Inter',sans-serif; font-size:14px; padding:10px 14px; width:100%; outline:none; transition:border-color .2s; }
+    input:focus,textarea:focus,select:focus { border-color:var(--blue); }
+    input::placeholder,textarea::placeholder { color:var(--muted); }
+    label { color:var(--muted); font-size:12px; letter-spacing:.5px; margin-bottom:6px; display:block; }
+    .btn { padding:11px 22px; border:none; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; transition:all .2s; letter-spacing:.3px; }
+    .btn-primary { background:linear-gradient(135deg,var(--green),var(--blue)); color:#080f1a; }
+    .btn-primary:hover { opacity:.85; }
+    .btn-primary:disabled { background:#1a3a5c; color:var(--muted); cursor:not-allowed; }
+    .btn-secondary { background:rgba(255,255,255,.04); border:1px solid var(--border); color:#94a3b8; }
+    .btn-secondary:hover { border-color:var(--dim); color:var(--text); }
+    .btn-blue { background:linear-gradient(135deg,var(--blue),var(--purple)); color:#fff; }
+    .btn-danger { background:rgba(255,80,80,.1); border:1px solid rgba(255,80,80,.3); color:var(--red); }
+    .btn-sm { padding:7px 14px; font-size:12px; border-radius:7px; }
+    .live-dot { display:inline-block; width:7px; height:7px; background:var(--green); border-radius:50%; margin-right:6px; animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
+    .spinner-wrap { position:fixed; inset:0; background:var(--bg); display:flex; align-items:center; justify-content:center; z-index:999; flex-direction:column; gap:16px; }
+    .spinner { width:40px; height:40px; border:3px solid var(--border); border-top-color:var(--green); border-radius:50%; animation:spin .8s linear infinite; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+    .grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+    /* LOBBY */
+    .qcm-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:14px; margin-bottom:24px; }
+    .qcm-card { background:rgba(255,255,255,.03); border:1px solid var(--border); border-radius:12px; padding:20px; cursor:pointer; transition:all .25s; position:relative; }
+    .qcm-card:hover { border-color:var(--blue); background:rgba(0,180,255,.06); transform:translateY(-2px); }
+    .qcm-card .qc-icon { font-size:30px; margin-bottom:12px; }
+    .qcm-card .qc-title { font-size:15px; font-weight:600; margin-bottom:5px; }
+    .qcm-card .qc-meta { color:var(--muted); font-size:12px; }
+    .qcm-card .qc-badge { position:absolute; top:12px; right:12px; }
+    /* QUIZ */
+    #screen-quiz { padding:32px 24px; }
+    .q-progress-bar { height:3px; background:#0d1f35; border-radius:2px; }
+    .q-progress-fill { height:100%; background:linear-gradient(90deg,var(--green),var(--blue)); border-radius:2px; transition:width .4s; }
+    .options { display:flex; flex-direction:column; gap:10px; margin-bottom:20px; }
+    .option { display:flex; align-items:center; gap:14px; padding:13px 16px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07); border-radius:10px; cursor:pointer; transition:all .2s; }
+    .option:hover:not(.disabled) { background:rgba(0,180,255,.07); border-color:rgba(0,180,255,.3); }
+    .option.sel { background:rgba(0,180,255,.1); border-color:var(--blue); }
+    .option.ok  { background:rgba(0,255,136,.1); border-color:var(--green); }
+    .option.ko  { background:rgba(255,80,80,.1);  border-color:var(--red); }
+    .opt-letter { width:26px; height:26px; border-radius:7px; border:1px solid currentColor; display:flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0; font-family:'JetBrains Mono',monospace; font-weight:700; }
+    .expl-box { background:rgba(0,180,255,.06); border:1px solid rgba(0,180,255,.2); border-radius:10px; padding:13px 16px; margin-bottom:20px; display:none; }
+    .expl-box p { color:#7dd3fc; font-size:13px; line-height:1.6; }
+    /* KPI */
+    .kpi-box { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px 14px; text-align:center; }
+    .kpi-val { font-size:26px; font-weight:700; font-family:'JetBrains Mono',monospace; }
+    .kpi-lbl { color:var(--muted); font-size:11px; margin-top:4px; letter-spacing:.5px; }
+    /* SESSIONS */
+    .session-row { display:flex; align-items:center; gap:12px; padding:10px 14px; background:rgba(255,255,255,.02); border-radius:8px; border:1px solid rgba(255,255,255,.04); margin-bottom:7px; font-family:'JetBrains Mono',monospace; font-size:12px; }
+    .s-bar { flex:1; height:5px; background:#0a1628; border-radius:3px; }
+    .s-bar-fill { height:100%; border-radius:3px; }
+    .bar-track { height:7px; background:#0a1628; border-radius:4px; }
+    .bar-fill { height:100%; border-radius:4px; transition:width 1s ease; }
+    /* ADMIN */
+    #screen-admin { padding:32px 24px; justify-content:flex-start; }
+    .admin-tabs { display:flex; gap:8px; margin-bottom:24px; flex-wrap:wrap; }
+    .tab { padding:9px 20px; border-radius:8px; font-size:13px; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--muted); font-family:'Inter',sans-serif; transition:all .2s; }
+    .tab.active { background:rgba(0,180,255,.1); border-color:var(--blue); color:var(--blue); }
+    .question-builder { background:rgba(255,255,255,.02); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:12px; position:relative; }
+    .q-num-label { font-size:11px; color:var(--muted); margin-bottom:12px; font-family:'JetBrains Mono',monospace; letter-spacing:1px; }
+    .opt-input-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+    .opt-radio { width:16px; height:16px; accent-color:var(--green); cursor:pointer; flex-shrink:0; }
+    .add-q-btn { width:100%; padding:13px; background:rgba(0,255,136,.04); border:1px dashed rgba(0,255,136,.2); border-radius:10px; color:rgba(0,255,136,.5); font-size:13px; cursor:pointer; transition:all .2s; font-family:'Inter',sans-serif; }
+    .add-q-btn:hover { background:rgba(0,255,136,.08); color:var(--green); border-color:rgba(0,255,136,.4); }
+    .remove-q { position:absolute; top:16px; right:16px; background:none; border:none; color:var(--red); cursor:pointer; font-size:18px; opacity:.4; transition:opacity .2s; }
+    .remove-q:hover { opacity:1; }
+    .admin-qcm-row { display:flex; align-items:center; gap:12px; padding:14px 16px; background:rgba(255,255,255,.02); border:1px solid var(--border); border-radius:10px; margin-bottom:8px; }
+    .icon-list { display:grid; grid-template-columns:repeat(8,1fr); gap:8px; margin-bottom:12px; }
+    .icon-opt { padding:8px; background:rgba(255,255,255,.03); border:1px solid var(--border); border-radius:8px; text-align:center; font-size:20px; cursor:pointer; transition:all .2s; }
+    .icon-opt:hover,.icon-opt.sel { background:rgba(0,180,255,.1); border-color:var(--blue); }
+    /* IMPORT */
+    .drop-zone { border:2px dashed var(--border); border-radius:14px; padding:48px 24px; text-align:center; cursor:pointer; transition:all .25s; position:relative; }
+    .drop-zone:hover,.drop-zone.dragover { border-color:var(--blue); background:rgba(0,180,255,.04); }
+    .drop-zone input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+    .import-result { background:rgba(0,255,136,.06); border:1px solid rgba(0,255,136,.2); border-radius:12px; padding:20px; margin-top:16px; display:none; }
+    .import-result.error { background:rgba(255,80,80,.06); border-color:rgba(255,80,80,.2); }
+    .import-preview { max-height:200px; overflow-y:auto; margin:12px 0; }
+    .imp-q-row { padding:8px 12px; background:rgba(255,255,255,.03); border-radius:6px; margin-bottom:6px; font-size:13px; color:var(--muted); }
+    .imp-q-row strong { color:var(--text); }
+    /* DASHBOARD */
+    #screen-dashboard { padding:32px 24px; justify-content:flex-start; }
+    @media(max-width:600px) {
+      .grid2,.grid3,.grid4 { grid-template-columns:1fr 1fr; }
+      .card { padding:20px 16px; }
+      .icon-list { grid-template-columns:repeat(6,1fr); }
+      .admin-tabs { gap:6px; }
+      .tab { padding:7px 14px; font-size:12px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="spinner-wrap" id="loader">
+  <div class="spinner"></div>
+  <p style="color:var(--muted);font-size:12px;letter-spacing:2px;font-family:'JetBrains Mono',monospace;">CONNEXION...</p>
+</div>
+
+<!-- LOBBY -->
+<div id="screen-lobby" class="screen" style="display:none;">
+  <div style="width:100%;max-width:900px;">
+    <div style="width:72px;height:72px;background:linear-gradient(135deg,rgba(0,255,136,.15),rgba(0,180,255,.15));border:1px solid rgba(0,255,136,.3);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 20px;">🧠</div>
+    <p style="color:var(--blue);font-size:11px;letter-spacing:4px;text-align:center;margin-bottom:10px;font-family:'JetBrains Mono',monospace;">PLATEFORME QCM INTERACTIVE</p>
+    <h1 style="font-size:30px;font-weight:700;text-align:center;letter-spacing:-1px;margin-bottom:8px;font-family:'JetBrains Mono',monospace;">Choisissez votre Quiz</h1>
+    <p style="color:var(--muted);text-align:center;font-size:14px;margin:0 0 28px;line-height:1.6;">Sélectionnez un QCM ci-dessous. Résultats centralisés en temps réel.</p>
+    <div class="qcm-grid" id="qcm-grid"><div style="grid-column:1/-1;text-align:center;color:var(--dim);padding:48px;">Chargement...</div></div>
+    <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;">
+      <button class="btn btn-secondary" onclick="goAdmin()">⚙️ Administration</button>
+      <button class="btn btn-secondary" onclick="showDashboard('')">📊 Dashboard global</button>
+    </div>
+    <p style="color:var(--dim);font-size:11px;text-align:center;margin-top:14px;font-family:'JetBrains Mono',monospace;"><span class="live-dot"></span>Résultats synchronisés via Firebase</p>
+  </div>
+</div>
+
+<!-- QUIZ -->
+<div id="screen-quiz" class="screen" style="display:none;">
+  <div style="width:100%;max-width:760px;margin-bottom:22px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <span style="color:var(--green);font-size:12px;letter-spacing:2px;font-family:'JetBrains Mono',monospace;" id="q-counter">Q 1/10</span>
+      <span style="color:var(--muted);font-size:11px;font-family:'JetBrains Mono',monospace;" id="q-qcm-title">QCM</span>
+    </div>
+    <div class="q-progress-bar"><div class="q-progress-fill" id="q-progress" style="width:0%"></div></div>
+  </div>
+  <div class="card">
+    <div style="width:44px;height:44px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:18px;" id="q-icon-box">🔐</div>
+    <p style="font-size:18px;line-height:1.55;margin-bottom:24px;font-weight:600;" id="q-text"></p>
+    <div class="options" id="q-options"></div>
+    <div class="expl-box" id="q-expl"><p id="q-expl-text"></p></div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-primary" id="btn-validate" onclick="validateAnswer()" disabled>VALIDER</button>
+      <button class="btn btn-blue" id="btn-next" onclick="nextQuestion()" style="display:none;">SUIVANT →</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div id="screen-results" class="screen" style="display:none;">
+  <div style="width:100%;max-width:720px;">
+    <div style="text-align:center;margin-bottom:26px;">
+      <div style="font-size:58px;margin-bottom:10px;" id="res-emoji">🏆</div>
+      <h1 style="font-size:24px;font-weight:700;margin-bottom:10px;">Quiz terminé !</h1>
+      <span class="tag" id="res-badge">EXPERT</span>
+    </div>
+    <div class="grid3" style="margin-bottom:16px;">
+      <div class="kpi-box"><div style="font-size:22px;margin-bottom:6px;">📊</div><div class="kpi-val" id="res-score">0%</div><div class="kpi-lbl">SCORE</div></div>
+      <div class="kpi-box"><div style="font-size:22px;margin-bottom:6px;">✅</div><div class="kpi-val" style="color:var(--green)" id="res-correct">0</div><div class="kpi-lbl">CORRECTES</div></div>
+      <div class="kpi-box"><div style="font-size:22px;margin-bottom:6px;">❌</div><div class="kpi-val" style="color:var(--red)" id="res-wrong">0</div><div class="kpi-lbl">INCORRECTES</div></div>
+    </div>
+    <div class="card" style="margin-bottom:16px;padding:20px 24px;">
+      <p style="color:var(--muted);font-size:11px;letter-spacing:1.5px;margin-bottom:14px;font-family:'JetBrains Mono',monospace;">📡 STATS GLOBALES — <span id="res-qcm-name"></span></p>
+      <div class="grid3">
+        <div><div class="kpi-val" style="font-size:20px;" id="g-answered">—</div><div class="kpi-lbl" style="margin-top:4px;">Réponses</div></div>
+        <div><div class="kpi-val" style="color:var(--green);font-size:20px;" id="g-correct">—</div><div class="kpi-lbl" style="margin-top:4px;">Bonnes</div></div>
+        <div><div class="kpi-val" style="color:var(--red);font-size:20px;" id="g-wrong">—</div><div class="kpi-lbl" style="margin-top:4px;">Mauvaises</div></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-secondary" onclick="startQuiz(window._cQCM)">🔄 Recommencer</button>
+      <button class="btn btn-secondary" onclick="showScreen('lobby');loadLobby()">← Autre QCM</button>
+      <button class="btn btn-blue" onclick="showDashboard(window._cQCM.id)">📊 Dashboard</button>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="screen-dashboard" class="screen" style="display:none;">
+  <div style="width:100%;max-width:900px;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:26px;flex-wrap:wrap;gap:12px;">
+      <div>
+        <h1 style="color:var(--green);font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;">📊 DASHBOARD</h1>
+        <p style="color:var(--muted);font-size:12px;margin-top:4px;font-family:'JetBrains Mono',monospace;"><span class="live-dot"></span>TEMPS RÉEL — <span id="dash-title">TOUS LES QCM</span></p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <select id="dash-select" onchange="loadDashboard(this.value)" style="width:200px;font-size:13px;"></select>
+        <button class="btn btn-secondary btn-sm" onclick="loadDashboard(document.getElementById('dash-select').value)">⟳</button>
+        <button class="btn btn-secondary btn-sm" onclick="showScreen('lobby');loadLobby()">← Retour</button>
+      </div>
+    </div>
+    <div class="grid4" style="margin-bottom:18px;">
+      <div class="kpi-box"><div style="font-size:20px;margin-bottom:7px;">👥</div><div class="kpi-val" style="color:var(--blue)" id="d-participants">—</div><div class="kpi-lbl">PARTICIPANTS</div></div>
+      <div class="kpi-box"><div style="font-size:20px;margin-bottom:7px;">📝</div><div class="kpi-val" id="d-total">—</div><div class="kpi-lbl">RÉPONSES</div></div>
+      <div class="kpi-box"><div style="font-size:20px;margin-bottom:7px;">✅</div><div class="kpi-val" style="color:var(--green)" id="d-correct">—</div><div class="kpi-lbl">BONNES</div></div>
+      <div class="kpi-box"><div style="font-size:20px;margin-bottom:7px;">❌</div><div class="kpi-val" style="color:var(--red)" id="d-wrong">—</div><div class="kpi-lbl">MAUVAISES</div></div>
+    </div>
+    <div class="grid2" style="margin-bottom:18px;">
+      <div class="card" style="padding:20px;">
+        <p style="color:var(--muted);font-size:11px;letter-spacing:1.5px;margin-bottom:12px;font-family:'JetBrains Mono',monospace;">TAUX DE RÉUSSITE</p>
+        <div style="font-size:36px;font-weight:700;letter-spacing:-2px;margin-bottom:12px;font-family:'JetBrains Mono',monospace;" id="d-pct">—</div>
+        <div class="bar-track"><div class="bar-fill" id="d-bar-pct" style="width:0%;background:linear-gradient(90deg,var(--green),var(--blue))"></div></div>
+      </div>
+      <div class="card" style="padding:20px;">
+        <p style="color:var(--muted);font-size:11px;letter-spacing:1.5px;margin-bottom:12px;font-family:'JetBrains Mono',monospace;">SCORE MOYEN</p>
+        <div style="font-size:36px;font-weight:700;letter-spacing:-2px;margin-bottom:12px;color:var(--blue);font-family:'JetBrains Mono',monospace;" id="d-avg">—</div>
+        <div class="bar-track"><div class="bar-fill" id="d-bar-avg" style="width:0%;background:linear-gradient(90deg,var(--blue),var(--purple))"></div></div>
+      </div>
+    </div>
+    <div class="card" style="padding:22px;">
+      <p style="color:var(--muted);font-size:11px;letter-spacing:1.5px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;">HISTORIQUE DES SESSIONS</p>
+      <div id="d-sessions"><p style="color:var(--dim);text-align:center;padding:32px;">Chargement...</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="screen-admin" class="screen" style="display:none;justify-content:flex-start;">
+  <div style="width:100%;max-width:900px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px;">
+      <div>
+        <h1 style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--blue);">⚙️ ADMINISTRATION</h1>
+        <p style="color:var(--muted);font-size:12px;margin-top:4px;">Créez, importez et gérez vos QCM</p>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="showScreen('lobby');loadLobby()">← Retour</button>
+    </div>
+    <!-- Gate -->
+    <div id="admin-gate" class="card" style="max-width:420px;margin:0 auto;">
+      <p style="font-size:15px;font-weight:600;margin-bottom:6px;">Accès administrateur</p>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:18px;">Entrez le mot de passe pour gérer les QCM.</p>
+      <label>Mot de passe</label>
+      <input type="password" id="admin-pwd" placeholder="••••••••" onkeydown="if(event.key==='Enter')checkPwd()" />
+      <p style="color:var(--red);font-size:12px;margin-top:8px;display:none;" id="pwd-err">Mot de passe incorrect</p>
+      <button class="btn btn-primary" style="margin-top:14px;width:100%;" onclick="checkPwd()">ACCÉDER</button>
+      <p style="color:var(--dim);font-size:11px;margin-top:12px;text-align:center;">Mot de passe par défaut : <span style="color:var(--muted);font-family:'JetBrains Mono',monospace;">admin123</span></p>
+    </div>
+    <!-- Panel -->
+    <div id="admin-panel" style="display:none;">
+      <div class="admin-tabs">
+        <button class="tab active" id="tab-btn-list"   onclick="switchTab('list')">📋 Mes QCM</button>
+        <button class="tab"        id="tab-btn-import" onclick="switchTab('import')">📥 Importer HTML</button>
+        <button class="tab"        id="tab-btn-create" onclick="switchTab('create')">✏️ Créer / Éditer</button>
+      </div>
+
+      <!-- LIST -->
+      <div id="tab-list-content"></div>
+
+      <!-- ══════════════════════════════════════════════════════════
+           IMPORT TAB
+      ══════════════════════════════════════════════════════════ -->
+      <div id="tab-import-content" style="display:none;">
+        <div class="card" style="padding:28px;">
+          <h2 style="font-size:16px;font-weight:600;margin-bottom:6px;">📥 Importer un QCM depuis un fichier HTML</h2>
+          <p style="color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.6;">
+            Déposez ici vos fichiers QCM HTML. L'importateur détecte automatiquement tous les formats :
+            <span style="color:var(--green);">questions/quizData/QUESTIONS</span>,
+            champs <span style="color:var(--green);">question/q</span>,
+            options <span style="color:var(--green);">options/opts</span>,
+            réponse <span style="color:var(--green);">correct/answer</span>,
+            explication <span style="color:var(--green);">explanation/exp/expl</span>.
+          </p>
+
+          <!-- Drop zone - multi files -->
+          <div class="drop-zone" id="drop-zone">
+            <input type="file" id="file-input" accept=".html" multiple onchange="handleFiles(this.files)" />
+            <div style="pointer-events:none;">
+              <div style="font-size:44px;margin-bottom:12px;">📂</div>
+              <p style="font-size:15px;font-weight:600;margin-bottom:6px;">Glissez vos fichiers HTML ici</p>
+              <p style="color:var(--muted);font-size:13px;">ou cliquez pour sélectionner — plusieurs fichiers acceptés</p>
+            </div>
+          </div>
+
+          <!-- Preview area -->
+          <div id="import-result-area"></div>
+        </div>
+      </div>
+
+      <!-- CREATE / EDIT -->
+      <div id="tab-create-content" style="display:none;">
+        <input type="hidden" id="edit-id" />
+        <div class="card" style="margin-bottom:14px;">
+          <p style="font-size:14px;font-weight:600;margin-bottom:16px;color:var(--blue);">Informations générales</p>
+          <div class="grid2" style="margin-bottom:14px;">
+            <div><label>Titre *</label><input id="f-title" placeholder="Ex: Cybersécurité, Python, Histoire..." /></div>
+            <div><label>Description courte</label><input id="f-desc" placeholder="Ex: Les bases en 10 questions" /></div>
+          </div>
+          <label>Icône</label>
+          <div class="icon-list" id="icon-grid"></div>
+          <input type="hidden" id="f-icon" value="🧠" />
+        </div>
+        <div id="qbuilder"></div>
+        <button class="add-q-btn" onclick="addQ()">+ Ajouter une question</button>
+        <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end;flex-wrap:wrap;">
+          <button class="btn btn-secondary" onclick="switchTab('list')">Annuler</button>
+          <button class="btn btn-primary" onclick="saveQCM()">💾 ENREGISTRER</button>
+        </div>
+        <div id="fb-msg" style="margin-top:10px;font-size:13px;text-align:center;display:none;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     FIREBASE + LOGIC
+══════════════════════════════════════════════════════════════════ -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, push, get, set, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDB0iA0syNLXEmr_fzrmp-vrcHNqZ9S90s",
+  authDomain: "qcm-cybersecurite.firebaseapp.com",
+  databaseURL: "https://qcm-cybersecurite-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "qcm-cybersecurite",
+  storageBucket: "qcm-cybersecurite.firebasestorage.app",
+  messagingSenderId: "389496708749",
+  appId: "1:389496708749:web:3cbcb65c2b2e0ae8b08cc4"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// ── State ─────────────────────────────────────────────────────
+let _cq=0,_sel=null,_conf=false,_ans=[],_dashInt=null,_qCount=0;
+window._cQCM=null;
+const ICONS=["🧠","🔐","🌍","💻","🧪","📚","🏛️","🎯","🔬","📡","🚀","💡","⚡","🛡️","🎓","📊","🧮","🎨","🏥","⚖️","🌱","🤖","🔢","🧬","📖","🎵","🏆","💰","🗺️","🔭","🧩","🌐","📱","🖥️","🔑","🕵️","🌐","🧰","📶","🔒"];
+const PWD="admin123";
+
+// ── Nav ───────────────────────────────────────────────────────
+window.showScreen=id=>{
+  ['lobby','quiz','results','dashboard','admin'].forEach(s=>document.getElementById('screen-'+s).style.display='none');
+  document.getElementById('screen-'+id).style.display='flex';
+  if(id!=='dashboard'&&_dashInt){clearInterval(_dashInt);_dashInt=null;}
+};
+function scoreColor(p){return p>=80?'#00ff88':p>=60?'#00b4ff':'#ff5050';}
+function fmt(ts){return new Date(ts).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}
+
+// ── LOBBY ─────────────────────────────────────────────────────
+window.loadLobby=async()=>{
+  const g=document.getElementById('qcm-grid');
+  g.innerHTML='<div style="grid-column:1/-1;text-align:center;color:var(--dim);padding:48px;">Chargement...</div>';
+  try{
+    const snap=await get(ref(db,'qcms'));
+    if(!snap.exists()){g.innerHTML='<div style="grid-column:1/-1;text-align:center;color:var(--dim);padding:48px;line-height:2;">Aucun QCM disponible.<br><button class="btn btn-primary btn-sm" onclick="goAdmin()">➕ Créer ou importer un QCM</button></div>';return;}
+    g.innerHTML='';
+    Object.entries(snap.val()).forEach(([id,qcm])=>{
+      const d=document.createElement('div');d.className='qcm-card';
+      d.innerHTML=`<div class="qc-icon">${qcm.icon||'🧠'}</div><div class="qc-title">${qcm.title}</div><div class="qc-meta">${(qcm.questions||[]).length} questions${qcm.desc?' • '+qcm.desc:''}</div><span class="tag qc-badge" style="background:rgba(0,180,255,.1);color:var(--blue);border:1px solid rgba(0,180,255,.2);">JOUER</span>`;
+      d.onclick=()=>startQuiz({id,...qcm});
+      g.appendChild(d);
+    });
+  }catch(e){g.innerHTML='<div style="color:var(--red);text-align:center;padding:48px;">Erreur Firebase</div>';}
+};
+
+// ── QUIZ ──────────────────────────────────────────────────────
+window.startQuiz=qcm=>{
+  window._cQCM=qcm;_cq=0;_sel=null;_conf=false;_ans=[];
+  document.getElementById('q-qcm-title').textContent=qcm.title;
+  document.getElementById('q-icon-box').textContent=qcm.icon||'🧠';
+  showScreen('quiz');renderQ();
+};
+function renderQ(){
+  const q=window._cQCM.questions[_cq],tot=window._cQCM.questions.length;
+  document.getElementById('q-counter').textContent=`Q ${_cq+1}/${tot}`;
+  document.getElementById('q-progress').style.width=`${(_cq/tot)*100}%`;
+  document.getElementById('q-text').textContent=q.q;
+  const c=document.getElementById('q-options');c.innerHTML='';
+  q.opts.forEach((o,i)=>{
+    const el=document.createElement('div');el.className='option';el.dataset.i=i;
+    el.innerHTML=`<span class="opt-letter" style="color:#94a3b8;border-color:#94a3b8">${String.fromCharCode(65+i)}</span><span style="font-size:14px;line-height:1.5;flex:1;color:#94a3b8;">${o}</span>`;
+    el.onclick=()=>pickOpt(i);c.appendChild(el);
+  });
+  document.getElementById('q-expl').style.display='none';
+  document.getElementById('btn-validate').style.display='inline-block';
+  document.getElementById('btn-validate').disabled=true;
+  document.getElementById('btn-next').style.display='none';
+  _sel=null;_conf=false;
+}
+window.pickOpt=i=>{
+  if(_conf)return;_sel=i;
+  document.querySelectorAll('.option').forEach((el,idx)=>{
+    const lt=el.querySelector('.opt-letter'),tx=el.querySelector('span:last-child');
+    if(idx===i){el.className='option sel';lt.style.color='#00b4ff';lt.style.borderColor='#00b4ff';tx.style.color='#00b4ff';}
+    else{el.className='option';lt.style.color='#94a3b8';lt.style.borderColor='#94a3b8';tx.style.color='#94a3b8';}
+  });
+  document.getElementById('btn-validate').disabled=false;
+};
+window.validateAnswer=()=>{
+  if(_sel===null)return;_conf=true;
+  const q=window._cQCM.questions[_cq],ok=_sel===q.correct;
+  document.querySelectorAll('.option').forEach((el,idx)=>{
+    el.classList.add('disabled');
+    const lt=el.querySelector('.opt-letter'),tx=el.querySelector('span:last-child');
+    if(idx===q.correct){el.className='option ok disabled';lt.style.color='#00ff88';lt.style.borderColor='#00ff88';tx.style.color='#00ff88';el.innerHTML+='<span style="margin-left:auto;font-size:17px;">✅</span>';}
+    else if(idx===_sel&&!ok){el.className='option ko disabled';lt.style.color='#ff5050';lt.style.borderColor='#ff5050';tx.style.color='#ff5050';el.innerHTML+='<span style="margin-left:auto;font-size:17px;">❌</span>';}
+  });
+  if(q.expl){document.getElementById('q-expl-text').innerHTML=`💡 <strong>Explication :</strong> ${q.expl}`;document.getElementById('q-expl').style.display='block';}
+  document.getElementById('btn-validate').style.display='none';
+  document.getElementById('btn-next').style.display='inline-block';
+  document.getElementById('btn-next').textContent=_cq+1<window._cQCM.questions.length?'SUIVANT →':'VOIR LES RÉSULTATS →';
+  _ans.push({correct:ok});
+};
+window.nextQuestion=()=>{if(_cq+1<window._cQCM.questions.length){_cq++;renderQ();}else finishQuiz();};
+async function finishQuiz(){
+  const correct=_ans.filter(a=>a.correct).length,wrong=_ans.length-correct,score=Math.round(correct/_ans.length*100);
+  try{await push(ref(db,`sessions/${window._cQCM.id}`),{score,correct,wrong,total:_ans.length,date:Date.now()});}catch(e){}
+  document.getElementById('res-emoji').textContent=score>=80?'🏆':score>=60?'🎯':'📚';
+  document.getElementById('res-score').textContent=score+'%';document.getElementById('res-score').style.color=scoreColor(score);
+  document.getElementById('res-correct').textContent=correct;document.getElementById('res-wrong').textContent=wrong;
+  document.getElementById('res-qcm-name').textContent=window._cQCM.title;
+  const b=document.getElementById('res-badge');
+  if(score>=80){b.textContent='EXPERT';b.style.cssText='background:rgba(0,255,136,.1);color:#00ff88;border:1px solid #00ff88';}
+  else if(score>=60){b.textContent='CONFIRMÉ';b.style.cssText='background:rgba(0,180,255,.1);color:#00b4ff;border:1px solid #00b4ff';}
+  else{b.textContent='DÉBUTANT';b.style.cssText='background:rgba(255,153,0,.1);color:#ff9900;border:1px solid #ff9900';}
+  try{const s=await get(ref(db,`sessions/${window._cQCM.id}`));if(s.exists()){const d=Object.values(s.val());document.getElementById('g-answered').textContent=d.reduce((a,x)=>a+x.total,0);document.getElementById('g-correct').textContent=d.reduce((a,x)=>a+x.correct,0);document.getElementById('g-wrong').textContent=d.reduce((a,x)=>a+x.wrong,0);}}catch(e){}
+  showScreen('results');
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────
+window.showDashboard=async qcmId=>{
+  showScreen('dashboard');
+  const sel=document.getElementById('dash-select');
+  sel.innerHTML='<option value="">— Tous les QCM —</option>';
+  try{const s=await get(ref(db,'qcms'));if(s.exists())Object.entries(s.val()).forEach(([id,q])=>{const o=document.createElement('option');o.value=id;o.textContent=(q.icon||'')+' '+q.title;sel.appendChild(o);});}catch(e){}
+  if(qcmId)sel.value=qcmId;
+  loadDashboard(qcmId||'');
+  _dashInt=setInterval(()=>loadDashboard(document.getElementById('dash-select').value),5000);
+};
+window.loadDashboard=async qcmId=>{
+  let sessions=[];
+  try{
+    if(qcmId){
+      const qt=await get(ref(db,`qcms/${qcmId}/title`));
+      document.getElementById('dash-title').textContent=qt.exists()?qt.val():qcmId;
+      const s=await get(ref(db,`sessions/${qcmId}`));if(s.exists())sessions=Object.values(s.val());
+    }else{
+      document.getElementById('dash-title').textContent='TOUS LES QCM';
+      const s=await get(ref(db,'sessions'));if(s.exists())Object.values(s.val()).forEach(v=>{if(typeof v==='object')sessions.push(...Object.values(v));});
+    }
+  }catch(e){}
+  sessions.sort((a,b)=>b.date-a.date);renderDash(sessions);
+};
+function renderDash(sessions){
+  const tot=sessions.reduce((a,s)=>a+s.total,0),totC=sessions.reduce((a,s)=>a+s.correct,0),totW=sessions.reduce((a,s)=>a+s.wrong,0);
+  const pct=tot?Math.round(totC/tot*100):0,avg=sessions.length?Math.round(sessions.reduce((a,s)=>a+s.score,0)/sessions.length):0;
+  document.getElementById('d-participants').textContent=sessions.length;
+  document.getElementById('d-total').textContent=tot;
+  document.getElementById('d-correct').textContent=totC;
+  document.getElementById('d-wrong').textContent=totW;
+  const pe=document.getElementById('d-pct');pe.textContent=pct+'%';pe.style.color=scoreColor(pct);
+  document.getElementById('d-bar-pct').style.width=pct+'%';
+  document.getElementById('d-avg').textContent=avg+'%';
+  document.getElementById('d-bar-avg').style.width=avg+'%';
+  const l=document.getElementById('d-sessions');
+  if(!sessions.length){l.innerHTML='<p style="color:var(--dim);text-align:center;padding:32px;">Aucune session enregistrée</p>';return;}
+  l.innerHTML=sessions.slice(0,15).map((s,i)=>{const c=scoreColor(s.score);return`<div class="session-row"><span style="color:var(--dim);min-width:28px;">#${sessions.length-i}</span><div class="s-bar"><div class="s-bar-fill" style="width:${s.score}%;background:${c}"></div></div><span style="color:${c};min-width:46px;text-align:right;">${s.score}%</span><span style="color:#00ff88;min-width:42px;">✅${s.correct}</span><span style="color:#ff5050;min-width:42px;">❌${s.wrong}</span><span style="color:var(--dim);">${fmt(s.date)}</span></div>`;}).join('');
+}
+
+// ── ADMIN ─────────────────────────────────────────────────────
+window.goAdmin=()=>{showScreen('admin');document.getElementById('admin-gate').style.display='';document.getElementById('admin-pwd').value='';document.getElementById('pwd-err').style.display='none';document.getElementById('admin-panel').style.display='none';};
+window.checkPwd=()=>{if(document.getElementById('admin-pwd').value===PWD){document.getElementById('admin-gate').style.display='none';document.getElementById('admin-panel').style.display='block';loadAdminList();buildIconGrid();}else{document.getElementById('pwd-err').style.display='block';}};
+window.switchTab=t=>{
+  ['list','import','create'].forEach(n=>{document.getElementById('tab-btn-'+n).className='tab'+(t===n?' active':'');document.getElementById('tab-'+n+'-content').style.display=t===n?'block':'none';});
+  if(t==='list')loadAdminList();
+  if(t==='create'){clearForm();}
+};
+
+// ── IMPORT ────────────────────────────────────────────────────
+
+// Setup drag & drop
+window.addEventListener('load',()=>{
+  const dz=document.getElementById('drop-zone');
+  if(dz){
+    dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragover');});
+    dz.addEventListener('dragleave',()=>dz.classList.remove('dragover'));
+    dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragover');handleFiles(e.dataTransfer.files);});
+  }
+});
+
+window.handleFiles=async(files)=>{
+  const area=document.getElementById('import-result-area');
+  area.innerHTML='<p style="color:var(--muted);font-size:13px;margin-top:16px;text-align:center;">⏳ Analyse en cours...</p>';
+  const results=[];
+  for(const file of files){
+    const text=await file.text();
+    const parsed=parseQCMHtml(text,file.name);
+    results.push({file:file.name,parsed});
+  }
+  renderImportResults(results);
+};
+
+// ─── CORE PARSER ──────────────────────────────────────────────
+function parseQCMHtml(html, filename){
+  try{
+    // 1. Extract title from <title> tag
+    const titleMatch=html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    let title=titleMatch?titleMatch[1].trim():'';
+    // Clean common prefixes
+    title=title.replace(/^(QCM\s*[-–—:]\s*|QCM\s+|Quiz\s+Interactif\s*[-–—:]\s*|Exercices Interactifs\s*[-–—:]\s*)/i,'').trim();
+    if(!title)title=filename.replace(/\.html$/i,'').replace(/[_-]/g,' ');
+
+    // 2. Extract the JS array — try multiple variable names
+    const arrayPatterns=[
+      /const\s+questions\s*=\s*(\[[\s\S]*?\]);/,
+      /const\s+QUESTIONS\s*=\s*(\[[\s\S]*?\]);/,
+      /const\s+quizData\s*=\s*(\[[\s\S]*?\]);/,
+      /let\s+questions\s*=\s*(\[[\s\S]*?\]);/,
+      /var\s+questions\s*=\s*(\[[\s\S]*?\]);/,
+    ];
+    let rawArray=null;
+    for(const pat of arrayPatterns){
+      // Extract the array robustly by finding balanced brackets
+      const startMatch=html.match(pat.source.replace('(\\[[\\s\\S]*?\\]);',''));
+      if(startMatch){
+        const startIdx=html.indexOf(startMatch[0]);
+        const arrStart=html.indexOf('[',startIdx+startMatch[0].length-1);
+        if(arrStart!==-1){
+          rawArray=extractBalanced(html,arrStart,'[',']');
+          if(rawArray)break;
+        }
+      }
+    }
+    if(!rawArray) return {error:'Aucun tableau de questions trouvé dans ce fichier.'};
+
+    // 3. Parse each question object
+    const questions=parseQuestionArray(rawArray);
+    if(!questions.length) return {error:'Questions trouvées mais impossible de les analyser.'};
+
+    // 4. Detect icon from title
+    const icon=detectIcon(title);
+
+    return {title,icon,questions,count:questions.length};
+  }catch(e){
+    return {error:'Erreur de parsing : '+e.message};
+  }
+}
+
+// Extract balanced brackets/braces
+function extractBalanced(str,start,open,close){
+  let depth=0,i=start,result='';
+  for(;i<str.length;i++){
+    if(str[i]===open)depth++;
+    else if(str[i]===close){depth--;if(depth===0){result=str.slice(start,i+1);break;}}
+  }
+  return result||null;
+}
+
+// Parse the raw array string into question objects
+function parseQuestionArray(raw){
+  const questions=[];
+  // Split into individual objects by finding top-level { }
+  let depth=0,start=-1;
+  for(let i=0;i<raw.length;i++){
+    if(raw[i]==='{'){if(depth===0)start=i;depth++;}
+    else if(raw[i]==='}'){depth--;if(depth===0&&start!==-1){const obj=raw.slice(start,i+1);const q=parseQuestionObj(obj);if(q)questions.push(q);start=-1;}}
+  }
+  return questions;
+}
+
+function parseQuestionObj(obj){
+  try{
+    // Extract question text — supports: question:"...", q:"..."
+    const qText=extractField(obj,['question','q']);
+    if(!qText)return null;
+
+    // Extract options array — supports: options:[...], opts:[...]
+    const optsRaw=extractArrayField(obj,['options','opts']);
+    if(!optsRaw||optsRaw.length<2)return null;
+
+    // Extract correct answer — supports: correct:N, answer:N
+    const correctStr=extractField(obj,['correct','answer'],true);
+    const correct=correctStr!==null?parseInt(correctStr):0;
+
+    // Extract explanation — supports: explanation:"...", exp:"...", expl:"..."
+    const expl=extractField(obj,['explanation','exp','expl'])||'';
+
+    return{q:qText,opts:optsRaw,correct:isNaN(correct)?0:correct,expl};
+  }catch(e){return null;}
+}
+
+// Extract a string field value by multiple possible key names
+function extractField(obj,keys,numeric=false){
+  for(const key of keys){
+    // Match: key: "value" or key: 'value' or key: 123
+    const patterns=numeric
+      ? [new RegExp(`\\b${key}\\s*:\\s*(\\d+)`)]
+      : [
+          new RegExp(`\\b${key}\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`),
+          new RegExp(`\\b${key}\\s*:\\s*'((?:[^'\\\\]|\\\\.)*)'`),
+          // backtick
+          new RegExp(`\\b${key}\\s*:\\s*\`((?:[^\`\\\\]|\\\\.)*)\``),
+        ];
+    for(const pat of patterns){
+      const m=obj.match(pat);
+      if(m)return m[1].replace(/\\n/g,' ').replace(/\\"/g,'"').replace(/\\'/g,"'").trim();
+    }
+  }
+  return null;
+}
+
+// Extract an array of strings by multiple possible key names
+function extractArrayField(obj,keys){
+  for(const key of keys){
+    const pat=new RegExp(`\\b${key}\\s*:\\s*(\\[)`);
+    const m=obj.match(pat);
+    if(m){
+      const start=obj.indexOf(m[0])+m[0].length-1;
+      const arrStr=extractBalanced(obj,start,'[',']');
+      if(arrStr){
+        // Extract quoted strings from array
+        const items=[...arrStr.matchAll(/"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'/g)]
+          .map(x=>(x[1]!==undefined?x[1]:x[2]).replace(/\\n/g,' ').replace(/\\"/g,'"').trim())
+          .filter(Boolean);
+        if(items.length>=2)return items;
+      }
+    }
+  }
+  return null;
+}
+
+// Auto-detect icon based on title keywords
+function detectIcon(title){
+  const t=title.toLowerCase();
+  if(/wifi|bluetooth|réseau|network/i.test(t))return'📶';
+  if(/windows|bureau|barre|tâches|fichier|gestionnaire/i.test(t))return'🖥️';
+  if(/cyber|sécurité|vpn|arnaque|virus|hack|phishing/i.test(t))return'🛡️';
+  if(/internet|web|moteur|recherche|histoire/i.test(t))return'🌐';
+  if(/intelligence|ia|artificielle|gpt|machine/i.test(t))return'🤖';
+  if(/gafam|google|facebook|amazon|apple|microsoft/i.test(t))return'🏢';
+  if(/python|programmation|code|javascript/i.test(t))return'💻';
+  if(/histoire|géographie|politique/i.test(t))return'🏛️';
+  if(/science|physique|chimie|biologie/i.test(t))return'🧪';
+  if(/math|calcul|algèbre/i.test(t))return'🧮';
+  if(/musique|art|culture/i.test(t))return'🎵';
+  if(/santé|médecine|corps/i.test(t))return'🏥';
+  return'🧠';
+}
+
+// ─── RENDER IMPORT RESULTS ────────────────────────────────────
+function renderImportResults(results){
+  const area=document.getElementById('import-result-area');
+  area.innerHTML='';
+  results.forEach((r,idx)=>{
+    const {file,parsed}=r;
+    const div=document.createElement('div');
+    if(parsed.error){
+      div.className='import-result error';
+      div.innerHTML=`<p style="color:var(--red);font-weight:600;margin-bottom:6px;">❌ ${file}</p><p style="color:var(--muted);font-size:13px;">${parsed.error}</p>`;
+    }else{
+      div.className='import-result';
+      div.style.display='block';
+      div.innerHTML=`
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+          <div>
+            <span style="font-size:22px;margin-right:8px;">${parsed.icon}</span>
+            <strong style="font-size:15px;">${parsed.title}</strong>
+            <span style="color:var(--muted);font-size:12px;margin-left:10px;">${parsed.count} questions détectées</span>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="importQCM(${idx})">⬆️ Importer dans Firebase</button>
+        </div>
+        <div class="import-preview" id="prev-${idx}">
+          ${parsed.questions.slice(0,5).map((q,i)=>`
+            <div class="imp-q-row">
+              <span style="color:var(--blue);font-size:11px;font-family:'JetBrains Mono',monospace;margin-right:8px;">Q${i+1}</span>
+              <strong>${q.q}</strong>
+              <span style="color:var(--green);font-size:11px;margin-left:8px;">✓ ${q.opts[q.correct]}</span>
+            </div>`).join('')}
+          ${parsed.questions.length>5?`<p style="color:var(--dim);font-size:12px;text-align:center;padding:6px;">... et ${parsed.questions.length-5} autres questions</p>`:''}
+        </div>
+        <div id="imp-status-${idx}" style="font-size:13px;text-align:center;margin-top:10px;display:none;"></div>
+      `;
+    }
+    area.appendChild(div);
+  });
+  window._importResults=results;
+}
+
+window.importQCM=async idx=>{
+  const {parsed}=window._importResults[idx];
+  if(!parsed||parsed.error)return;
+  const statusEl=document.getElementById(`imp-status-${idx}`);
+  statusEl.style.display='block';statusEl.style.color='var(--muted)';statusEl.textContent='⏳ Import en cours...';
+  try{
+    await push(ref(db,'qcms'),{
+      title:parsed.title,
+      desc:`${parsed.count} questions`,
+      icon:parsed.icon,
+      questions:parsed.questions,
+      createdAt:Date.now()
+    });
+    statusEl.style.color='var(--green)';statusEl.textContent=`✅ "${parsed.title}" importé avec succès dans Firebase !`;
+    // Disable button
+    const btn=document.querySelector(`#prev-${idx}`).previousElementSibling.querySelector('button');
+    if(btn){btn.disabled=true;btn.textContent='✅ Importé';}
+  }catch(e){statusEl.style.color='var(--red)';statusEl.textContent='❌ Erreur : '+e.message;}
+};
+
+// ── ADMIN LIST ────────────────────────────────────────────────
+function buildIconGrid(){
+  document.getElementById('icon-grid').innerHTML=ICONS.map(ic=>`<div class="icon-opt${ic==='🧠'?' sel':''}" onclick="pickIcon('${ic}')" data-ic="${ic}">${ic}</div>`).join('');
+}
+window.pickIcon=ic=>{document.querySelectorAll('.icon-opt').forEach(e=>e.classList.toggle('sel',e.dataset.ic===ic));document.getElementById('f-icon').value=ic;};
+function clearForm(){
+  document.getElementById('edit-id').value='';document.getElementById('f-title').value='';document.getElementById('f-desc').value='';
+  document.getElementById('f-icon').value='🧠';document.getElementById('qbuilder').innerHTML='';_qCount=0;
+  buildIconGrid();addQ();addQ();addQ();
+}
+window.addQ=(data)=>{
+  _qCount++;const n=_qCount;
+  const d=document.createElement('div');d.className='question-builder';d.id=`qb${n}`;
+  d.innerHTML=`<button class="remove-q" onclick="document.getElementById('qb${n}').remove()">✕</button>
+    <p class="q-num-label">QUESTION ${n}</p>
+    <div style="margin-bottom:12px;"><label>Énoncé *</label><textarea id="qq${n}" rows="2" placeholder="Posez votre question...">${data?.q||''}</textarea></div>
+    <label>Options (● = bonne réponse) *</label>
+    ${[0,1,2,3].map(i=>`<div class="opt-input-row"><input type="radio" class="opt-radio" name="cr${n}" value="${i}" ${data?.correct===i?'checked':''}/><input type="text" id="qo${n}_${i}" placeholder="Option ${String.fromCharCode(65+i)}" value="${data?.opts?.[i]||''}" /></div>`).join('')}
+    <div style="margin-top:10px;"><label>Explication (optionnel)</label><input type="text" id="qe${n}" placeholder="Pourquoi cette réponse ?" value="${data?.expl||''}" /></div>`;
+  document.getElementById('qbuilder').appendChild(d);
+};
+window.saveQCM=async()=>{
+  const title=document.getElementById('f-title').value.trim(),desc=document.getElementById('f-desc').value.trim(),icon=document.getElementById('f-icon').value,eid=document.getElementById('edit-id').value;
+  if(!title){showMsg('⚠️ Le titre est obligatoire','#ff9900');return;}
+  const questions=[];
+  document.querySelectorAll('.question-builder').forEach(qb=>{
+    const n=qb.id.replace('qb','');
+    const q=document.getElementById(`qq${n}`)?.value.trim();if(!q)return;
+    const opts=[0,1,2,3].map(i=>document.getElementById(`qo${n}_${i}`)?.value.trim()||'');
+    const cr=document.querySelector(`input[name="cr${n}"]:checked`);
+    const expl=document.getElementById(`qe${n}`)?.value.trim()||'';
+    if(opts.filter(Boolean).length<2)return;
+    questions.push({q,opts,correct:cr?+cr.value:0,expl});
+  });
+  if(!questions.length){showMsg('⚠️ Ajoutez au moins une question valide','#ff9900');return;}
+  const data={title,desc,icon,questions,createdAt:Date.now()};
+  try{
+    if(eid){await set(ref(db,`qcms/${eid}`),data);showMsg('✅ QCM mis à jour !','#00ff88');}
+    else{await push(ref(db,'qcms'),data);showMsg('✅ QCM créé !','#00ff88');}
+    setTimeout(()=>switchTab('list'),1600);
+  }catch(e){showMsg('❌ Erreur : '+e.message,'#ff5050');}
+};
+function showMsg(m,c){const e=document.getElementById('fb-msg');e.textContent=m;e.style.color=c;e.style.display='block';setTimeout(()=>e.style.display='none',3000);}
+window.loadAdminList=async()=>{
+  const c=document.getElementById('tab-list-content');
+  c.innerHTML='<p style="color:var(--dim);text-align:center;padding:32px;">Chargement...</p>';
+  try{
+    const s=await get(ref(db,'qcms'));
+    if(!s.exists()){c.innerHTML='<p style="color:var(--dim);text-align:center;padding:40px;">Aucun QCM — importez ou créez-en un !</p>';return;}
+    c.innerHTML=Object.entries(s.val()).map(([id,q])=>`
+      <div class="admin-qcm-row">
+        <span style="font-size:24px;">${q.icon||'🧠'}</span>
+        <div style="flex:1;"><div style="font-size:14px;font-weight:600;">${q.title}</div><div style="color:var(--muted);font-size:12px;margin-top:2px;">${(q.questions||[]).length} questions${q.desc?' • '+q.desc:''}</div></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secondary btn-sm" onclick="editQCM('${id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="delQCM('${id}','${q.title.replace(/'/g,"\\'")}')">🗑️</button>
+        </div>
+      </div>`).join('');
+  }catch(e){c.innerHTML='<p style="color:var(--red);text-align:center;">Erreur Firebase</p>';}
+};
+window.editQCM=async id=>{
+  switchTab('create');
+  try{
+    const s=await get(ref(db,`qcms/${id}`));if(!s.exists())return;
+    const q=s.val();
+    document.getElementById('edit-id').value=id;document.getElementById('f-title').value=q.title||'';document.getElementById('f-desc').value=q.desc||'';document.getElementById('f-icon').value=q.icon||'🧠';
+    buildIconGrid();window.pickIcon(q.icon||'🧠');
+    document.getElementById('qbuilder').innerHTML='';_qCount=0;
+    (q.questions||[]).forEach(qs=>addQ(qs));
+  }catch(e){}
+};
+window.delQCM=async(id,title)=>{
+  if(!confirm(`Supprimer "${title}" et toutes ses sessions ?`))return;
+  try{await remove(ref(db,`qcms/${id}`));await remove(ref(db,`sessions/${id}`));loadAdminList();}
+  catch(e){alert('Erreur : '+e.message);}
+};
+
+// ── INIT ──────────────────────────────────────────────────────
+window.addEventListener('load',async()=>{
+  setTimeout(()=>{document.getElementById('loader').style.display='none';showScreen('lobby');loadLobby();},900);
+});
+</script>
+</body>
+</html>
